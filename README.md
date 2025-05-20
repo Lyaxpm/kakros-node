@@ -22,8 +22,8 @@ An automated bot for interacting with the Pharos Testnet, performing swaps, tran
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/vikitoshi/Pharos-Auto-Bot.git
-   cd Pharos-Auto-Bot
+   git clone https://github.com/Lyaxpm/kakros-node
+   cd kakros-node
    ```
 
 2. Install dependencies:
@@ -31,10 +31,12 @@ An automated bot for interacting with the Pharos Testnet, performing swaps, tran
    npm install
    ```
 
-3. Create a `.env` file in the root directory with your private keys:
+3. Edit a `wallets.txt` file in the root directory with your private keys:
    ```
-   PRIVATE_KEY_1=your_first_private_key_here
-   PRIVATE_KEY_2=your_second_private_key_here
+   pk1
+   pk2
+   pk3
+   ..
    ```
 
 4. (Optional) Add proxies to `proxies.txt` (one per line):
