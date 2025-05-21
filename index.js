@@ -415,7 +415,7 @@ const performCheckIn = async (wallet, proxy = null) => {
     const signature = await wallet.signMessage(message);
     logger.step(`Signed message: ${signature}`);
 
-    const loginUrl = `https://api.pharosnetwork.xyz/user/login?address=${wallet.address}&signature=${signature}&invite_code=S6NGMzXSCDBxhnwo`;
+    const loginUrl = `https://api.pharosnetwork.xyz/user/login?address=${wallet.address}&signature=${signature}&invite_code=dHihVt23BohgP7ja`;
     const headers = {
       accept: "application/json, text/plain, */*",
       "accept-language": "en-US,en;q=0.8",
