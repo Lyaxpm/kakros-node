@@ -55,7 +55,23 @@ const poolAddresses = {
   USDT_WPHRS: '0x70118b6eec45329e0534d849bc3e588bb6752527',
 };
 
-const contractAddress = '0x1a4de519154ae51200b0ad7c90f7fac75547888a';
+const possibleContractAddresses = [
+  '0x7bc7d7bc43a060a86753ece1a3ad996239479827',
+  '0x5065d87c0c3514374d0d1315dc579cd3acb78d22',
+  '0xe416c9ff6e6c75ba35aa67e6e0cb269a4d03562a',
+  '0x2c94649d9027bda8e40de489bddb017ce5b1a57f',
+  '0x9c52bb9c72bd2f81a215ab11711be5c9528cd098',
+  '0x1f6d978654c1c27d1f321516ae10786f86413996',
+  '0x223f0c5a8a62b4427b5bc53fe632d147ce310d7d',
+  '0x9b137b5327637fa13398c821073996060c603a69',
+  '0x0e28c028bad1bc5004bf32271cf409f23285a8a3',
+  '0xab6f4aa4a8a5a29b397063c0184358de77876844',
+  '0x4d4a41225643ab4d4c246b1f98ebfea58fbf34e1',
+  '0xe5e3936dbd7753505683ae95a9c52560b8bd4ea0',
+  '0xeb18e94918b63446b9e408a2890cd6ea0d6979ba'
+];
+
+const contractAddress = possibleContractAddresses[Math.floor(Math.random() * possibleContractAddresses.length)];
 
 const tokenDecimals = {
   WPHRS: 18,
@@ -91,104 +107,102 @@ const erc20Abi = [
   'function withdraw(uint256 wad) public',
 ];
 
-const positionManagerAbi = [
-  {
-    inputs: [{
-      components: [{
+const positionManagerAbi = [{
+  inputs: [{
+    components: [{
+      internalType: 'address',
+      name: 'token0',
+      type: 'address'
+    },
+      {
         internalType: 'address',
-        name: 'token0',
+        name: 'token1',
         type: 'address'
       },
-        {
-          internalType: 'address',
-          name: 'token1',
-          type: 'address'
-        },
-        {
-          internalType: 'uint24',
-          name: 'fee',
-          type: 'uint24'
-        },
-        {
-          internalType: 'int24',
-          name: 'tickLower',
-          type: 'int24'
-        },
-        {
-          internalType: 'int24',
-          name: 'tickUpper',
-          type: 'int24'
-        },
-        {
-          internalType: 'uint256',
-          name: 'amount0Desired',
-          type: 'uint256'
-        },
-        {
-          internalType: 'uint256',
-          name: 'amount1Desired',
-          type: 'uint256'
-        },
-        {
-          internalType: 'uint256',
-          name: 'amount0Min',
-          type: 'uint256'
-        },
-        {
-          internalType: 'uint256',
-          name: 'amount1Min',
-          type: 'uint256'
-        },
-        {
-          internalType: 'address',
-          name: 'recipient',
-          type: 'address'
-        },
-        {
-          internalType: 'uint256',
-          name: 'deadline',
-          type: 'uint256'
-        },
-      ],
-      internalType: 'struct INonfungiblePositionManager.MintParams',
-      name: 'params',
-      type: 'tuple',
-    },
+      {
+        internalType: 'uint24',
+        name: 'fee',
+        type: 'uint24'
+      },
+      {
+        internalType: 'int24',
+        name: 'tickLower',
+        type: 'int24'
+      },
+      {
+        internalType: 'int24',
+        name: 'tickUpper',
+        type: 'int24'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount0Desired',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount1Desired',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount0Min',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount1Min',
+        type: 'uint256'
+      },
+      {
+        internalType: 'address',
+        name: 'recipient',
+        type: 'address'
+      },
+      {
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256'
+      },
     ],
-    name: 'mint',
-    outputs: [{
+    internalType: 'struct INonfungiblePositionManager.MintParams',
+    name: 'params',
+    type: 'tuple',
+  },
+  ],
+  name: 'mint',
+  outputs: [{
+    internalType: 'uint256',
+    name: 'tokenId',
+    type: 'uint256'
+  },
+    {
+      internalType: 'uint128',
+      name: 'liquidity',
+      type: 'uint128'
+    },
+    {
       internalType: 'uint256',
-      name: 'tokenId',
+      name: 'amount0',
       type: 'uint256'
     },
-      {
-        internalType: 'uint128',
-        name: 'liquidity',
-        type: 'uint128'
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount0',
-        type: 'uint256'
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount1',
-        type: 'uint256'
-      },
-    ],
-    stateMutability: 'payable',
-    type: 'function',
-  },
+    {
+      internalType: 'uint256',
+      name: 'amount1',
+      type: 'uint256'
+    },
+  ],
+  stateMutability: 'payable',
+  type: 'function',
+},
 ];
 
-const pairOptions = [
-  {
-    id: 1,
-    from: 'WPHRS',
-    to: 'USDC',
-    amount: 0.001
-  },
+const pairOptions = [{
+  id: 1,
+  from: 'WPHRS',
+  to: 'USDC',
+  amount: 0.001
+},
   {
     id: 2,
     from: 'WPHRS',
@@ -221,15 +235,14 @@ const pairOptions = [
   },
 ];
 
-const lpOptions = [
-  {
-    id: 1,
-    token0: 'WPHRS',
-    token1: 'USDC',
-    amount0: 0.001,
-    amount1: 0.1,
-    fee: 3000
-  },
+const lpOptions = [{
+  id: 1,
+  token0: 'WPHRS',
+  token1: 'USDC',
+  amount0: 0.001,
+  amount1: 0.1,
+  fee: 3000
+},
   {
     id: 2,
     token0: 'WPHRS',
