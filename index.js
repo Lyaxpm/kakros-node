@@ -26,6 +26,7 @@ const logger = {
   success: (msg) => console.log(`${colors.green}[+] ${msg}${colors.reset}`),
   loading: (msg) => console.log(`${colors.cyan}[⟳] ${msg}${colors.reset}`),
   step: (msg) => console.log(`${colors.white}[➤] ${msg}${colors.reset}`),
+  user: (msg) => console.log(`\n${colors.white}[➤] ${msg}${colors.reset}`),
   banner: () => {
     console.log(`${colors.cyan}${colors.bold}`);
     console.log('-------------------------------------------------');
@@ -45,6 +46,13 @@ const networkConfig = {
 const tokens = {
   USDC: '0xad902cf99c2de2f1ba5ec4d642fd7e49cae9ee37',
   WPHRS: '0x76aaada469d23216be5f7c596fa25f282ff9b364',
+  USDT: '0xed59de2d7ad9c043442e381231ee3646fc3c2939',
+  POSITION_MANAGER: '0xF8a1D4FF0f9b9Af7CE58E1fc1833688F3BFd6115',
+};
+
+const poolAddresses = {
+  USDC_WPHRS: '0x0373a059321219745aee4fad8a942cf088be3d0e',
+  USDT_WPHRS: '0x70118b6eec45329e0534d849bc3e588bb6752527',
 };
 
 const contractAddress = '0x1a4de519154ae51200b0ad7c90f7fac75547888a';
@@ -52,24 +60,192 @@ const contractAddress = '0x1a4de519154ae51200b0ad7c90f7fac75547888a';
 const tokenDecimals = {
   WPHRS: 18,
   USDC: 6,
+  USDT: 6,
 };
 
-const contractAbi = [
-  'function multicall(uint256 collectionAndSelfcalls, bytes[] data) public',
+const contractAbi = [{
+  inputs: [{
+    internalType: 'uint256',
+    name: 'collectionAndSelfcalls',
+    type: 'uint256'
+  },
+    {
+      internalType: 'bytes[]',
+      name: 'data',
+      type: 'bytes[]'
+    },
+  ],
+  name: 'multicall',
+  outputs: [],
+  stateMutability: 'nonpayable',
+  type: 'function',
+},
 ];
 
 const erc20Abi = [
   'function balanceOf(address) view returns (uint256)',
   'function allowance(address owner, address spender) view returns (uint256)',
   'function approve(address spender, uint256 amount) public returns (bool)',
+  'function decimals() view returns (uint8)',
+  'function deposit() public payable',
+  'function withdraw(uint256 wad) public',
+];
+
+const positionManagerAbi = [
+  {
+    inputs: [{
+      components: [{
+        internalType: 'address',
+        name: 'token0',
+        type: 'address'
+      },
+        {
+          internalType: 'address',
+          name: 'token1',
+          type: 'address'
+        },
+        {
+          internalType: 'uint24',
+          name: 'fee',
+          type: 'uint24'
+        },
+        {
+          internalType: 'int24',
+          name: 'tickLower',
+          type: 'int24'
+        },
+        {
+          internalType: 'int24',
+          name: 'tickUpper',
+          type: 'int24'
+        },
+        {
+          internalType: 'uint256',
+          name: 'amount0Desired',
+          type: 'uint256'
+        },
+        {
+          internalType: 'uint256',
+          name: 'amount1Desired',
+          type: 'uint256'
+        },
+        {
+          internalType: 'uint256',
+          name: 'amount0Min',
+          type: 'uint256'
+        },
+        {
+          internalType: 'uint256',
+          name: 'amount1Min',
+          type: 'uint256'
+        },
+        {
+          internalType: 'address',
+          name: 'recipient',
+          type: 'address'
+        },
+        {
+          internalType: 'uint256',
+          name: 'deadline',
+          type: 'uint256'
+        },
+      ],
+      internalType: 'struct INonfungiblePositionManager.MintParams',
+      name: 'params',
+      type: 'tuple',
+    },
+    ],
+    name: 'mint',
+    outputs: [{
+      internalType: 'uint256',
+      name: 'tokenId',
+      type: 'uint256'
+    },
+      {
+        internalType: 'uint128',
+        name: 'liquidity',
+        type: 'uint128'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount0',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount1',
+        type: 'uint256'
+      },
+    ],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+];
+
+const pairOptions = [
+  {
+    id: 1,
+    from: 'WPHRS',
+    to: 'USDC',
+    amount: 0.001
+  },
+  {
+    id: 2,
+    from: 'WPHRS',
+    to: 'USDT',
+    amount: 0.001
+  },
+  {
+    id: 3,
+    from: 'USDC',
+    to: 'WPHRS',
+    amount: 0.1
+  },
+  {
+    id: 4,
+    from: 'USDT',
+    to: 'WPHRS',
+    amount: 0.1
+  },
+  {
+    id: 5,
+    from: 'USDC',
+    to: 'USDT',
+    amount: 0.1
+  },
+  {
+    id: 6,
+    from: 'USDT',
+    to: 'USDC',
+    amount: 0.1
+  },
+];
+
+const lpOptions = [
+  {
+    id: 1,
+    token0: 'WPHRS',
+    token1: 'USDC',
+    amount0: 0.001,
+    amount1: 0.1,
+    fee: 3000
+  },
+  {
+    id: 2,
+    token0: 'WPHRS',
+    token1: 'USDT',
+    amount0: 0.001,
+    amount1: 0.1,
+    fee: 3000
+  },
 ];
 
 const loadProxies = () => {
   try {
     const proxies = fs.readFileSync('proxies.txt', 'utf8')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line);
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line);
     return proxies;
   } catch (error) {
     logger.warn('No proxies.txt found or failed to load, switching to direct mode');
@@ -80,9 +256,9 @@ const loadProxies = () => {
 const loadWallets = () => {
   try {
     const wallets = fs.readFileSync('wallets.txt', 'utf8')
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line);
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line);
     return wallets;
   } catch (error) {
     logger.error('Failed to load wallets.txt file');
@@ -118,18 +294,6 @@ const setupProvider = (proxy = null) => {
   }
 };
 
-const pairOptions = [{
-  id: 1,
-  from: 'WPHRS',
-  to: 'USDC'
-},
-{
-  id: 2,
-  from: 'USDC',
-  to: 'WPHRS'
-},
-];
-
 const checkBalanceAndApproval = async (wallet, tokenAddress, amount, decimals, spender) => {
   try {
     const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, wallet);
@@ -137,14 +301,32 @@ const checkBalanceAndApproval = async (wallet, tokenAddress, amount, decimals, s
     const required = ethers.parseUnits(amount.toString(), decimals);
 
     if (balance < required) {
-      logger.warn(`Skipping: Insufficient ${tokenDecimals[decimals] === 18 ? 'WPHRS' : 'USDC'} balance: ${ethers.formatUnits(balance, decimals)} < ${amount}`);
+      const tokenSymbol = Object.keys(tokens).find(key => tokens[key].toLowerCase() === tokenAddress.toLowerCase());
+      logger.warn(
+        `Skipping: Insufficient ${tokenSymbol || 'Unknown Token'} balance: ${ethers.formatUnits(balance, decimals)} < ${amount}`
+      );
       return false;
     }
 
     const allowance = await tokenContract.allowance(wallet.address, spender);
     if (allowance < required) {
       logger.step(`Approving ${amount} tokens for ${spender}...`);
-      const approveTx = await tokenContract.approve(spender, ethers.MaxUint256);
+      let estimatedGas;
+      try {
+        estimatedGas = await tokenContract.approve.estimateGas(spender, ethers.MaxUint256);
+      } catch (gasError) {
+        logger.error(`Gas estimation for approval failed: ${gasError.message}`);
+        return false;
+      }
+
+      const feeData = await wallet.provider.getFeeData();
+      const gasPrice = feeData.gasPrice || ethers.parseUnits('1', 'gwei');
+      const approveTx = await tokenContract.approve(spender, ethers.MaxUint256, {
+        gasLimit: Math.ceil(Number(estimatedGas) * 1.2),
+        gasPrice,
+        maxFeePerGas: feeData.maxFeePerGas || undefined,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || undefined,
+      });
       await approveTx.wait();
       logger.success('Approval completed');
     }
@@ -156,12 +338,55 @@ const checkBalanceAndApproval = async (wallet, tokenAddress, amount, decimals, s
   }
 };
 
+const getUserInfo = async (wallet, proxy = null, jwt) => {
+  try {
+    logger.user(`Workspaceing user info for wallet: ${wallet.address}`);
+    const profileUrl = `https://api.pharosnetwork.xyz/user/profile?address=${wallet.address}`;
+    const headers = {
+      accept: "application/json, text/plain, */*",
+      "accept-language": "en-US,en;q=0.8",
+      authorization: `Bearer ${jwt}`,
+      "sec-ch-ua": '"Chromium";v="136", "Brave";v="136", "Not.A/Brand";v="99"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-site",
+      "sec-gpc": "1",
+      Referer: "https://testnet.pharosnetwork.xyz/",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "User-Agent": randomUseragent.getRandom(),
+    };
+
+    const axiosConfig = {
+      method: 'get',
+      url: profileUrl,
+      headers,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
+    };
+
+    logger.loading('Fetching user profile...');
+    const response = await axios(axiosConfig);
+    const data = response.data;
+
+    if (data.code !== 0 || !data.data.user_info) {
+      logger.error(`Failed to fetch user info: ${data.msg || 'Unknown error'}`);
+      return;
+    }
+
+    const userInfo = data.data.user_info;
+    logger.info(`User ID: ${userInfo.ID}`);
+    logger.info(`Task Points: ${userInfo.TaskPoints}`);
+    logger.info(`Total Points: ${userInfo.TotalPoints}`);
+  } catch (error) {
+    logger.error(`Failed to fetch user info: ${error.message}`);
+  }
+};
+
 const getMulticallData = (pair, amount, walletAddress) => {
   try {
-    const decimalsFrom = tokenDecimals[pair.from];
-    const scaledAmountIn = ethers.parseUnits(amount.toString(), decimalsFrom);
-
-    const amountOutMin = ethers.toBigInt(0);
+    const decimals = tokenDecimals[pair.from];
+    const scaledAmount = ethers.parseUnits(amount.toString(), decimals);
 
     const exactInputSingleAbiTypes = ['address',
       'address',
@@ -170,54 +395,24 @@ const getMulticallData = (pair, amount, walletAddress) => {
       'uint256',
       'uint256',
       'uint160'];
-    const feeTier = 500; // Your existing fee tier
-    const sqrtPriceLimitX96 = 0; // No price limit
+    const feeTier = 500;
+    const sqrtPriceLimitX96 = 0;
 
-    let params;
-
-    if (pair.from === 'WPHRS' && pair.to === 'USDC') {
-      params = [
-        tokens.WPHRS,
-        // tokenIn
-        tokens.USDC,
-        // tokenOut
-        feeTier,
-        // fee
-        walletAddress,
-        // recipient
-        scaledAmountIn,
-        // amountIn (Correctly using the input amount)
-        amountOutMin,
-        // amountOutMinimum
-        sqrtPriceLimitX96 // sqrtPriceLimitX96
-      ];
-    } else if (pair.from === 'USDC' && pair.to === 'WPHRS') {
-      params = [
-        tokens.USDC,
-        // tokenIn
-        tokens.WPHRS,
-        // tokenOut
-        feeTier,
-        // fee
-        walletAddress,
-        // recipient (Changed from 0x...02 for typical behavior)
-        scaledAmountIn,
-        // amountIn (THE MAIN FIX)
-        amountOutMin,
-        // amountOutMinimum (using 0, original had a hardcoded value)
-        sqrtPriceLimitX96 // sqrtPriceLimitX96
-      ];
-    } else {
-      logger.error(`Invalid pair: ${pair.from} -> ${pair.to}`);
-      return [];
-    }
+    const params = [
+      tokens[pair.from],
+      tokens[pair.to],
+      feeTier,
+      walletAddress,
+      scaledAmount,
+      0,
+      sqrtPriceLimitX96,
+    ];
 
     const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(exactInputSingleAbiTypes, params);
-    return [ethers.concat(['0x04e45aaf', encodedData])]; // Prepend the inner function selector
+    return [ethers.concat(['0x04e45aaf', encodedData])];
 
   } catch (error) {
     logger.error(`Failed to generate multicall data for ${pair.from}->${pair.to}: ${error.message}`);
-    // Log the inputs to help debug if it still fails
     logger.error(`Debug Info: Pair: ${JSON.stringify(pair)}, Amount: ${amount}, Wallet: ${walletAddress}`);
     return [];
   }
@@ -226,45 +421,63 @@ const getMulticallData = (pair, amount, walletAddress) => {
 const performSwap = async (wallet, provider, index) => {
   try {
     const pair = pairOptions[Math.floor(Math.random() * pairOptions.length)];
-    const amount = pair.from === 'WPHRS' ? 0.001 : 0.1;
-    logger.step(`Preparing swap ${index + 1}: ${pair.from} -> ${pair.to} (${amount} ${pair.from})`);
+    const amount = pair.amount;
+    logger.step(
+      `Preparing swap ${index + 1}: ${pair.from} -> ${pair.to} (${amount} ${pair.from})`
+    );
 
     const decimals = tokenDecimals[pair.from];
-    const tokenContract = new ethers.Contract(tokens[pair.from], erc20Abi, provider);
+    const tokenAddress = tokens[pair.from];
+    const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, provider);
     const balance = await tokenContract.balanceOf(wallet.address);
     const required = ethers.parseUnits(amount.toString(), decimals);
 
     if (balance < required) {
-      logger.warn(`Skipping swap ${index + 1}: Insufficient ${pair.from} balance: ${ethers.formatUnits(balance, decimals)} < ${amount}`);
+      logger.warn(
+        `Skipping swap ${index + 1}: Insufficient ${pair.from} balance: ${ethers.formatUnits(
+          balance,
+          decimals
+        )} < ${amount}`
+      );
       return;
     }
 
-    if (!(await checkBalanceAndApproval(wallet, tokens[pair.from], amount, decimals, contractAddress))) {
+    if (!(await checkBalanceAndApproval(wallet, tokenAddress, amount, decimals, contractAddress))) {
       return;
     }
 
     const contract = new ethers.Contract(contractAddress, contractAbi, wallet);
-
     const multicallData = getMulticallData(pair, amount, wallet.address);
+
     if (!multicallData || multicallData.length === 0 || multicallData.some(data => !data || data === '0x')) {
       logger.error(`Invalid or empty multicall data for ${pair.from} -> ${pair.to}`);
       return;
     }
 
-    const gasLimit = 219249;
+    const deadline = Math.floor(Date.now() / 1000) + 300;
+    let estimatedGas;
+    try {
+      estimatedGas = await contract.multicall.estimateGas(deadline, multicallData, {
+        from: wallet.address,
+      });
+    } catch (error) {
+      logger.error(`Gas estimation failed for swap ${index + 1}: ${error.message}`);
+      return;
+    }
 
-    const tx = await contract.multicall(
-      ethers.toBigInt(Math.floor(Date.now() / 1000)),
-      multicallData,
-      {
-        gasLimit,
-        gasPrice: 0,
-      }
-    );
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.gasPrice || ethers.parseUnits('1', 'gwei');
+    const tx = await contract.multicall(deadline, multicallData, {
+      gasLimit: Math.ceil(Number(estimatedGas) * 1.2),
+      gasPrice,
+      maxFeePerGas: feeData.maxFeePerGas || undefined,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || undefined,
+    });
 
     logger.loading(`Swap transaction ${index + 1} sent, waiting for confirmation...`);
     const receipt = await tx.wait();
     logger.success(`Swap ${index + 1} completed: ${receipt.hash}`);
+    logger.step(`Explorer: https://testnet.pharosscan.xyz/tx/${receipt.hash}`);
   } catch (error) {
     logger.error(`Swap ${index + 1} failed: ${error.message}`);
     if (error.transaction) {
@@ -291,18 +504,73 @@ const transferPHRS = async (wallet, provider, index) => {
       return;
     }
 
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.gasPrice || ethers.parseUnits('1', 'gwei');
     const tx = await wallet.sendTransaction({
       to: toAddress,
       value: required,
       gasLimit: 21000,
-      gasPrice: 0,
+      gasPrice,
+      maxFeePerGas: feeData.maxFeePerGas || undefined,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || undefined,
     });
 
     logger.loading(`Transfer transaction ${index + 1} sent, waiting for confirmation...`);
     const receipt = await tx.wait();
     logger.success(`Transfer ${index + 1} completed: ${receipt.hash}`);
+    logger.step(`Explorer: https://testnet.pharosscan.xyz/tx/${receipt.hash}`);
   } catch (error) {
     logger.error(`Transfer ${index + 1} failed: ${error.message}`);
+    if (error.transaction) {
+      logger.error(`Transaction details: ${JSON.stringify(error.transaction, null, 2)}`);
+    }
+    if (error.receipt) {
+      logger.error(`Receipt: ${JSON.stringify(error.receipt, null, 2)}`);
+    }
+  }
+};
+
+const wrapPHRS = async (wallet, provider, index) => {
+  try {
+    const minAmount = 0.000001;
+    const maxAmount = 0.00001;
+    const amount = minAmount + Math.random() * (maxAmount - minAmount);
+    const amountWei = ethers.parseEther(amount.toFixed(6).toString());
+    logger.step(`Preparing wrap PHRS ${index + 1}: ${amount.toFixed(6)} PHRS to WPHRS`);
+
+    const balance = await provider.getBalance(wallet.address);
+    if (balance.lt(amountWei)) {
+      logger.warn(`Skipping wrap ${index + 1}: Insufficient PHRS balance: ${ethers.formatEther(balance)} < ${amount.toFixed(6)}`);
+      return;
+    }
+
+    const wphrsContract = new ethers.Contract(tokens.WPHRS, erc20Abi, wallet);
+    let estimatedGas;
+    try {
+      estimatedGas = await wphrsContract.deposit.estimateGas({
+        value: amountWei
+      });
+    } catch (error) {
+      logger.error(`Gas estimation failed for wrap ${index + 1}: ${error.message}`);
+      return;
+    }
+
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.gasPrice || ethers.parseUnits('1', 'gwei');
+    const tx = await wphrsContract.deposit({
+      value: amountWei,
+      gasLimit: Math.ceil(Number(estimatedGas) * 1.2),
+      gasPrice,
+      maxFeePerGas: feeData.maxFeePerGas || undefined,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || undefined,
+    });
+
+    logger.loading(`Wrap transaction ${index + 1} sent, waiting for confirmation...`);
+    const receipt = await tx.wait();
+    logger.success(`Wrap ${index + 1} completed: ${receipt.hash}`);
+    logger.step(`Explorer: https://testnet.pharosscan.xyz/tx/${receipt.hash}`);
+  } catch (error) {
+    logger.error(`Wrap ${index + 1} failed: ${error.message}`);
     if (error.transaction) {
       logger.error(`Transaction details: ${JSON.stringify(error.transaction, null, 2)}`);
     }
@@ -341,7 +609,7 @@ const claimFaucet = async (wallet, proxy = null) => {
       method: 'post',
       url: loginUrl,
       headers,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     };
 
     logger.loading('Sending login request for faucet...');
@@ -363,11 +631,11 @@ const claimFaucet = async (wallet, proxy = null) => {
     };
 
     logger.loading('Checking faucet status...');
-    const statusResponse = await axios({
+    const statusResponse = await axios( {
       method: 'get',
       url: statusUrl,
       headers: statusHeaders,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     });
     const statusData = statusResponse.data;
 
@@ -386,11 +654,11 @@ const claimFaucet = async (wallet, proxy = null) => {
 
     const claimUrl = `https://api.pharosnetwork.xyz/faucet/daily?address=${wallet.address}`;
     logger.loading('Claiming faucet...');
-    const claimResponse = await axios({
+    const claimResponse = await axios( {
       method: 'post',
       url: claimUrl,
       headers: statusHeaders,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     });
     const claimData = claimResponse.data;
 
@@ -436,7 +704,7 @@ const performCheckIn = async (wallet, proxy = null) => {
       method: 'post',
       url: loginUrl,
       headers,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     };
 
     logger.loading('Sending login request...');
@@ -445,7 +713,7 @@ const performCheckIn = async (wallet, proxy = null) => {
 
     if (loginData.code !== 0 || !loginData.data.jwt) {
       logger.error(`Login failed: ${loginData.msg || 'Unknown error'}`);
-      return false;
+      return null;
     }
 
     const jwt = loginData.data.jwt;
@@ -458,24 +726,100 @@ const performCheckIn = async (wallet, proxy = null) => {
     };
 
     logger.loading('Sending check-in request...');
-    const checkInResponse = await axios({
+    const checkInResponse = await axios( {
       method: 'post',
       url: checkInUrl,
       headers: checkInHeaders,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     });
     const checkInData = checkInResponse.data;
 
     if (checkInData.code === 0) {
       logger.success(`Check-in successful for ${wallet.address}`);
-      return true;
+      return jwt;
     } else {
       logger.warn(`Check-in failed, possibly already checked in: ${checkInData.msg || 'Unknown error'}`);
-      return false;
+      return jwt;
     }
   } catch (error) {
     logger.error(`Check-in failed for ${wallet.address}: ${error.message}`);
-    return false;
+    return null;
+  }
+};
+
+const addLiquidity = async (wallet, provider, index) => {
+  try {
+    const pair = lpOptions[Math.floor(Math.random() * lpOptions.length)];
+    const amount0 = pair.amount0;
+    const amount1 = pair.amount1;
+    logger.step(
+      `Preparing Liquidity Add ${index + 1}: ${pair.token0}/${pair.token1} (${amount0} ${pair.token0}, ${amount1} ${pair.token1})`
+    );
+
+    const decimals0 = tokenDecimals[pair.token0];
+    const amount0Wei = ethers.parseUnits(amount0.toString(), decimals0);
+    if (!(await checkBalanceAndApproval(wallet, tokens[pair.token0], amount0, decimals0, tokens.POSITION_MANAGER))) {
+      return;
+    }
+
+    const decimals1 = tokenDecimals[pair.token1];
+    const amount1Wei = ethers.parseUnits(amount1.toString(), decimals1);
+    if (!(await checkBalanceAndApproval(wallet, tokens[pair.token1], amount1, decimals1, tokens.POSITION_MANAGER))) {
+      return;
+    }
+
+    const positionManager = new ethers.Contract(tokens.POSITION_MANAGER, positionManagerAbi, wallet);
+
+    const deadline = Math.floor(Date.now() / 1000) + 600;
+    const tickLower = -60000;
+    const tickUpper = 60000;
+
+    const mintParams = {
+      token0: tokens[pair.token0],
+      token1: tokens[pair.token1],
+      fee: pair.fee,
+      tickLower,
+      tickUpper,
+      amount0Desired: amount0Wei,
+      amount1Desired: amount1Wei,
+      amount0Min: 0,
+      amount1Min: 0,
+      recipient: wallet.address,
+      deadline,
+    };
+
+    let estimatedGas;
+    try {
+      estimatedGas = await positionManager.mint.estimateGas(mintParams, {
+        from: wallet.address
+      });
+    } catch (error) {
+      logger.error(`Gas estimation failed for LP ${index + 1}: ${error.message}`);
+      return;
+    }
+
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.gasPrice || ethers.parseUnits('1', 'gwei');
+
+    const tx = await positionManager.mint(mintParams, {
+      gasLimit: Math.ceil(Number(estimatedGas) * 1.2),
+      gasPrice,
+      maxFeePerGas: feeData.maxFeePerGas || undefined,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas || undefined,
+    });
+
+    logger.loading(`Liquidity Add ${index + 1} sent, waiting for confirmation...`);
+    const receipt = await tx.wait();
+    logger.success(`Liquidity Add ${index + 1} completed: ${receipt.hash}`);
+    logger.step(`Explorer: https://testnet.pharosscan.xyz/tx/${receipt.hash}`);
+  } catch (error) {
+    logger.error(`Liquidity Add ${index + 1} failed: ${error.message}`);
+    if (error.transaction) {
+      logger.error(`Transaction details: ${JSON.stringify(error.transaction, null, 2)}`);
+    }
+    if (error.receipt) {
+      logger.error(`Receipt: ${JSON.stringify(error.receipt, null, 2)}`);
+    }
   }
 };
 
@@ -497,42 +841,72 @@ const main = async () => {
 
   const proxies = loadProxies();
   const privateKeys = loadWallets();
-  
+
   if (!privateKeys.length) {
     logger.error('No private keys found in wallets.txt');
     return;
   }
 
+  const numTransfers = 5;
+  const numWraps = 3;
+  const numSwaps = 5;
+  const numLPs = 2;
+
   while (true) {
     for (const privateKey of privateKeys) {
-      const proxy = proxies.length ? getRandomProxy(proxies) : null;
+      const proxy = proxies.length ? getRandomProxy(proxies): null;
       const provider = setupProvider(proxy);
       const wallet = new ethers.Wallet(privateKey, provider);
 
       logger.wallet(`Using wallet: ${wallet.address}`);
 
       await claimFaucet(wallet, proxy);
-
-      await performCheckIn(wallet, proxy);
-
-      for (let i = 0; i < 10; i++) {
-        await transferPHRS(wallet, provider, i);
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+      const jwt = await performCheckIn(wallet, proxy);
+      if (jwt) {
+        await getUserInfo(wallet, proxy, jwt);
+      } else {
+        logger.error('Skipping user info fetch due to failed check-in/login');
       }
 
-      for (let i = 0; i < 10; i++) {
+      console.log(`\n${colors.cyan}------------------------${colors.reset}`);
+      console.log(`${colors.cyan}TRANSAKSI PHRS${colors.reset}`);
+      console.log(`${colors.cyan}------------------------${colors.reset}`);
+      for (let i = 0; i < numTransfers; i++) {
+        await transferPHRS(wallet, provider, i);
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 5000 + 3000));
+      }
+
+      console.log(`\n${colors.cyan}------------------------${colors.reset}`);
+      console.log(`${colors.cyan}WRAP PHRS${colors.reset}`);
+      console.log(`${colors.cyan}------------------------${colors.reset}`);
+      for (let i = 0; i < numWraps; i++) {
+        await wrapPHRS(wallet, provider, i);
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 5000 + 3000));
+      }
+
+      console.log(`\n${colors.cyan}------------------------${colors.reset}`);
+      console.log(`${colors.cyan}SWAP TOKENS${colors.reset}`);
+      console.log(`${colors.cyan}------------------------${colors.reset}`);
+      for (let i = 0; i < numSwaps; i++) {
         await performSwap(wallet, provider, i);
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 5000 + 3000));
+      }
+
+      console.log(`\n${colors.cyan}------------------------${colors.reset}`);
+      console.log(`${colors.cyan}TAMBAH LIKUIDITAS (LP)${colors.reset}`);
+      console.log(`${colors.cyan}------------------------${colors.reset}`);
+      for (let i = 0; i < numLPs; i++) {
+        await addLiquidity(wallet, provider, i);
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 5000 + 3000));
       }
     }
 
-    logger.success('All actions completed for all wallets!');
-
+    logger.success('Semua aksi selesai untuk semua dompet!');
     await countdown();
   }
 };
 
 main().catch(error => {
-  logger.error(`Bot failed: ${error.message}`);
+  logger.error(`Bot gagal: ${error.message}`);
   process.exit(1);
 });
