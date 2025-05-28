@@ -1,9 +1,15 @@
-const { ethers } = require('ethers');
+const {
+  ethers
+} = require('ethers');
 const fs = require('fs');
-const { HttpsProxyAgent } = require('https-proxy-agent');
+const {
+  HttpsProxyAgent
+} = require('https-proxy-agent');
 const randomUseragent = require('random-useragent');
 const axios = require('axios');
-const prompt = require('prompt-sync')({ sigint: true });
+const prompt = require('prompt-sync')({
+  sigint: true
+});
 
 const colors = {
   reset: '\x1b[0m',
@@ -60,17 +66,23 @@ const tokenDecimals = {
   USDT: 6,
 };
 
-const contractAbi = [
-  {
-    inputs: [
-      { internalType: 'uint256', name: 'collectionAndSelfcalls', type: 'uint256' },
-      { internalType: 'bytes[]', name: 'data', type: 'bytes[]' },
-    ],
-    name: 'multicall',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
+const contractAbi = [{
+  inputs: [{
+    internalType: 'uint256',
+    name: 'collectionAndSelfcalls',
+    type: 'uint256'
   },
+    {
+      internalType: 'bytes[]',
+      name: 'data',
+      type: 'bytes[]'
+    },
+  ],
+  name: 'multicall',
+  outputs: [],
+  stateMutability: 'nonpayable',
+  type: 'function',
+},
 ];
 
 const erc20Abi = [
@@ -82,52 +94,150 @@ const erc20Abi = [
   'function withdraw(uint256 wad) public',
 ];
 
-const positionManagerAbi = [
-  {
-    inputs: [
+const positionManagerAbi = [{
+  inputs: [{
+    components: [{
+      internalType: 'address',
+      name: 'token0',
+      type: 'address'
+    },
       {
-        components: [
-          { internalType: 'address', name: 'token0', type: 'address' },
-          { internalType: 'address', name: 'token1', type: 'address' },
-          { internalType: 'uint24', name: 'fee', type: 'uint24' },
-          { internalType: 'int24', name: 'tickLower', type: 'int24' },
-          { internalType: 'int24', name: 'tickUpper', type: 'int24' },
-          { internalType: 'uint256', name: 'amount0Desired', type: 'uint256' },
-          { internalType: 'uint256', name: 'amount1Desired', type: 'uint256' },
-          { internalType: 'uint256', name: 'amount0Min', type: 'uint256' },
-          { internalType: 'uint256', name: 'amount1Min', type: 'uint256' },
-          { internalType: 'address', name: 'recipient', type: 'address' },
-          { internalType: 'uint256', name: 'deadline', type: 'uint256' },
-        ],
-        internalType: 'struct INonfungiblePositionManager.MintParams',
-        name: 'params',
-        type: 'tuple',
+        internalType: 'address',
+        name: 'token1',
+        type: 'address'
+      },
+      {
+        internalType: 'uint24',
+        name: 'fee',
+        type: 'uint24'
+      },
+      {
+        internalType: 'int24',
+        name: 'tickLower',
+        type: 'int24'
+      },
+      {
+        internalType: 'int24',
+        name: 'tickUpper',
+        type: 'int24'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount0Desired',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount1Desired',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount0Min',
+        type: 'uint256'
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount1Min',
+        type: 'uint256'
+      },
+      {
+        internalType: 'address',
+        name: 'recipient',
+        type: 'address'
+      },
+      {
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256'
       },
     ],
-    name: 'mint',
-    outputs: [
-      { internalType: 'uint256', name: 'tokenId', type: 'uint256' },
-      { internalType: 'uint128', name: 'liquidity', type: 'uint128' },
-      { internalType: 'uint256', name: 'amount0', type: 'uint256' },
-      { internalType: 'uint256', name: 'amount1', type: 'uint256' },
-    ],
-    stateMutability: 'payable',
-    type: 'function',
+    internalType: 'struct INonfungiblePositionManager.MintParams',
+    name: 'params',
+    type: 'tuple',
+  },
+  ],
+  name: 'mint',
+  outputs: [{
+    internalType: 'uint256',
+    name: 'tokenId',
+    type: 'uint256'
+  },
+    {
+      internalType: 'uint128',
+      name: 'liquidity',
+      type: 'uint128'
+    },
+    {
+      internalType: 'uint256',
+      name: 'amount0',
+      type: 'uint256'
+    },
+    {
+      internalType: 'uint256',
+      name: 'amount1',
+      type: 'uint256'
+    },
+  ],
+  stateMutability: 'payable',
+  type: 'function',
+},
+];
+
+const pairOptions = [{
+  id: 1,
+  from: 'WPHRS',
+  to: 'USDC',
+  amount: 0.001
+},
+  {
+    id: 2,
+    from: 'WPHRS',
+    to: 'USDT',
+    amount: 0.001
+  },
+  {
+    id: 3,
+    from: 'USDC',
+    to: 'WPHRS',
+    amount: 0.001
+  },
+  {
+    id: 4,
+    from: 'USDT',
+    to: 'WPHRS',
+    amount: 0.001
+  },
+  {
+    id: 5,
+    from: 'USDC',
+    to: 'USDT',
+    amount: 0.001
+  },
+  {
+    id: 6,
+    from: 'USDT',
+    to: 'USDC',
+    amount: 0.001
   },
 ];
 
-const pairOptions = [
-  { id: 1, from: 'WPHRS', to: 'USDC', amount: 0.001 },
-  { id: 2, from: 'WPHRS', to: 'USDT', amount: 0.001 },
-  { id: 3, from: 'USDC', to: 'WPHRS', amount: 0.001 },
-  { id: 4, from: 'USDT', to: 'WPHRS', amount: 0.001 },
-  { id: 5, from: 'USDC', to: 'USDT', amount: 0.001 },
-  { id: 6, from: 'USDT', to: 'USDC', amount: 0.001 },
-];
-
-const lpOptions = [
-  { id: 1, token0: 'WPHRS', token1: 'USDC', amount0: 0.001, amount1: 0.001, fee: 3000 },
-  { id: 2, token0: 'WPHRS', token1: 'USDT', amount0: 0.001, amount1: 0.001, fee: 3000 },
+const lpOptions = [{
+  id: 1,
+  token0: 'WPHRS',
+  token1: 'USDC',
+  amount0: 0.001,
+  amount1: 0.001,
+  fee: 3000
+},
+  {
+    id: 2,
+    token0: 'WPHRS',
+    token1: 'USDT',
+    amount0: 0.001,
+    amount1: 0.001,
+    fee: 3000
+  },
 ];
 
 const loadProxies = () => {
@@ -161,8 +271,12 @@ const setupProvider = (proxy = null) => {
       chainId: networkConfig.chainId,
       name: networkConfig.name,
     }, {
-      fetchOptions: { agent },
-      headers: { 'User-Agent': randomUseragent.getRandom() },
+      fetchOptions: {
+        agent
+      },
+      headers: {
+        'User-Agent': randomUseragent.getRandom()
+      },
     });
   } else {
     return new ethers.JsonRpcProvider(networkConfig.rpcUrl, {
@@ -240,7 +354,7 @@ const verifyTask = async (wallet, proxy, jwt, txHash) => {
     method: 'post',
     url: verifyUrl,
     headers,
-    httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+    httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
   };
   try {
     const response = await axios(axiosConfig);
@@ -278,7 +392,7 @@ const performSwap = async (wallet, provider, index, jwt, proxy) => {
     const tokenForBalanceCheck = new ethers.Contract(tokens[pair.from], erc20Abi, wallet.provider); // Gunakan provider untuk balanceOf
     const balance = await tokenForBalanceCheck.balanceOf(wallet.address);
     const required = ethers.parseUnits(amount.toString(), decimals);
-    
+
 
     if (balance < required) {
       logger.warn(
@@ -308,7 +422,8 @@ const performSwap = async (wallet, provider, index, jwt, proxy) => {
       // Untuk multicall, parameter pertama adalah 'collectionAndSelfcalls' (uint256), kedua adalah 'data' (bytes[])
       // 'deadline' yang Anda gunakan di sini (Math.floor(Date.now() / 1000) + 300) adalah untuk parameter pertama.
       // Jika contract.multicall mengharapkan deadline sebagai parameter pertama, maka ini benar.
-      estimatedGas = await contract.multicall.estimateGas(deadline, multicallData, { // Pastikan 'deadline' adalah parameter pertama yang benar
+      estimatedGas = await contract.multicall.estimateGas(deadline, multicallData, {
+        // Pastikan 'deadline' adalah parameter pertama yang benar
         from: wallet.address,
       });
     } catch (error) {
@@ -318,7 +433,8 @@ const performSwap = async (wallet, provider, index, jwt, proxy) => {
 
     const feeData = await provider.getFeeData();
     const gasPrice = feeData.gasPrice || ethers.parseUnits('1', 'gwei');
-    const tx = await contract.multicall(deadline, multicallData, { // Pastikan 'deadline' adalah parameter pertama yang benar
+    const tx = await contract.multicall(deadline, multicallData, {
+      // Pastikan 'deadline' adalah parameter pertama yang benar
       gasLimit: Math.ceil(Number(estimatedGas) * 1.2),
       gasPrice,
       maxFeePerGas: feeData.maxFeePerGas || undefined,
@@ -402,7 +518,9 @@ const wrapPHRS = async (wallet, provider, index, jwt, proxy) => {
     const wphrsContract = new ethers.Contract(tokens.WPHRS, erc20Abi, wallet);
     let estimatedGas;
     try {
-      estimatedGas = await wphrsContract.deposit.estimateGas({ value: amountWei });
+      estimatedGas = await wphrsContract.deposit.estimateGas({
+        value: amountWei
+      });
     } catch (error) {
       logger.error(`Gas estimation failed for wrap ${index + 1}: ${error.message}`);
       return;
@@ -439,11 +557,11 @@ const claimFaucet = async (wallet, proxy = null) => {
   try {
     logger.step(`Checking faucet eligibility for wallet: ${wallet.address}`);
 
-    const message = "pharos"; 
+    const message = "pharos";
     const signature = await wallet.signMessage(message);
     logger.step(`Signed message: ${signature}`);
 
-    const loginUrl = `https://api.pharosnetwork.xyz/user/login?address=${wallet.address}&signature=${signature}&invite_code=dHihVt23BohgP7ja`; 
+    const loginUrl = `https://api.pharosnetwork.xyz/user/login?address=${wallet.address}&signature=${signature}&invite_code=dHihVt23BohgP7ja`;
     const headers = {
       accept: "application/json, text/plain, */*",
       "accept-language": "en-US,en;q=0.8",
@@ -464,7 +582,7 @@ const claimFaucet = async (wallet, proxy = null) => {
       method: 'post',
       url: loginUrl,
       headers,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     };
 
     logger.loading('Sending login request for faucet...');
@@ -473,7 +591,7 @@ const claimFaucet = async (wallet, proxy = null) => {
 
     if (loginData.code !== 0 || !loginData.data.jwt) {
       logger.error(`Login failed for faucet: ${loginData.msg || 'Unknown error'}`);
-      return false; 
+      return false;
     }
 
     const jwt = loginData.data.jwt;
@@ -481,16 +599,18 @@ const claimFaucet = async (wallet, proxy = null) => {
 
     const statusUrl = `https://api.pharosnetwork.xyz/faucet/status?address=${wallet.address}`;
     const statusHeaders = {
-      ...headers, // Ambil header dasar
-      authorization: `Bearer ${jwt}`, // Ganti dengan JWT yang didapat
+      ...headers,
+      // Ambil header dasar
+      authorization: `Bearer ${jwt}`,
+      // Ganti dengan JWT yang didapat
     };
 
     logger.loading('Checking faucet status...');
-    const statusResponse = await axios({
+    const statusResponse = await axios( {
       method: 'get',
       url: statusUrl,
       headers: statusHeaders,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     });
     const statusData = statusResponse.data;
 
@@ -498,9 +618,11 @@ const claimFaucet = async (wallet, proxy = null) => {
       logger.error(`Faucet status check failed: ${statusData.msg || 'Unknown error'}`);
       return false;
     }
-    
+
     if (!statusData.data.is_able_to_faucet) {
-      const nextAvailable = new Date(statusData.data.avaliable_timestamp * 1000).toLocaleString('en-US', { timeZone: 'Asia/Makassar' }); // Sesuaikan timezone jika perlu
+      const nextAvailable = new Date(statusData.data.avaliable_timestamp * 1000).toLocaleString('en-US', {
+        timeZone: 'Asia/Makassar'
+      }); // Sesuaikan timezone jika perlu
       logger.warn(`Faucet not available until: ${nextAvailable}`);
       return false; // Return false jika tidak bisa klaim
     }
@@ -508,27 +630,29 @@ const claimFaucet = async (wallet, proxy = null) => {
     // Jika bisa klaim, lanjutkan ke proses klaim
     const claimUrl = `https://api.pharosnetwork.xyz/faucet/daily?address=${wallet.address}`;
     logger.loading('Claiming faucet...');
-    const claimResponse = await axios({ // Gunakan konfigurasi baru untuk klaim
-        method: 'post',
-        url: claimUrl,
-        headers: statusHeaders, // Gunakan header dengan JWT
-        httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+    const claimResponse = await axios( {
+      // Gunakan konfigurasi baru untuk klaim
+      method: 'post',
+      url: claimUrl,
+      headers: statusHeaders, // Gunakan header dengan JWT
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     });
     const claimData = claimResponse.data;
 
     if (claimData.code === 0) {
-        logger.success(`Faucet claimed successfully for ${wallet.address}`);
-        return true; // Return true jika berhasil
+      logger.success(`Faucet claimed successfully for ${wallet.address}`);
+      return true; // Return true jika berhasil
     } else {
-        logger.error(`Faucet claim failed: ${claimData.msg || 'Unknown error'}`);
-        return false; // Return false jika gagal
+      logger.error(`Faucet claim failed: ${claimData.msg || 'Unknown error'}`);
+      return false; // Return false jika gagal
     }
 
   } catch (error) {
     logger.error(`Faucet claim failed for ${wallet.address}: ${error.message}`);
-    if (error.response) { // Log detail error dari Axios jika ada
-        logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
-        logger.error(`Response status: ${error.response.status}`);
+    if (error.response) {
+      // Log detail error dari Axios jika ada
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+      logger.error(`Response status: ${error.response.status}`);
     }
     return false; // Return false jika ada error
   }
@@ -564,7 +688,7 @@ const performCheckIn = async (wallet, proxy = null) => {
       method: 'post',
       url: loginUrl,
       headers,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     };
 
     logger.loading('Sending login request...');
@@ -586,11 +710,11 @@ const performCheckIn = async (wallet, proxy = null) => {
     };
 
     logger.loading('Sending check-in request...');
-    const checkInResponse = await axios({
+    const checkInResponse = await axios( {
       method: 'post',
       url: checkInUrl,
       headers: checkInHeaders,
-      httpsAgent: proxy ? new HttpsProxyAgent(proxy) : null,
+      httpsAgent: proxy ? new HttpsProxyAgent(proxy): null,
     });
     const checkInData = checkInResponse.data;
 
@@ -600,13 +724,13 @@ const performCheckIn = async (wallet, proxy = null) => {
     } else {
       logger.warn(`Check-in failed or already checked in: ${checkInData.msg || 'Unknown error'}`);
       // Tetap return JWT karena login berhasil, mungkin check-in sudah dilakukan
-      return jwt; 
+      return jwt;
     }
   } catch (error) {
     logger.error(`Check-in process failed for ${wallet.address}: ${error.message}`);
-     if (error.response) {
-        logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
-        logger.error(`Response status: ${error.response.status}`);
+    if (error.response) {
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+      logger.error(`Response status: ${error.response.status}`);
     }
     return null;
   }
@@ -637,7 +761,7 @@ const addLiquidity = async (wallet, provider, index, jwt, proxy) => {
 
     const deadline = Math.floor(Date.now() / 1000) + 600; // 10 menit deadline
     const tickLower = -60000; // Contoh, sesuaikan jika perlu
-    const tickUpper = 60000;  // Contoh, sesuaikan jika perlu
+    const tickUpper = 60000; // Contoh, sesuaikan jika perlu
 
     const mintParams = {
       token0: tokens[pair.token0],
@@ -647,15 +771,19 @@ const addLiquidity = async (wallet, provider, index, jwt, proxy) => {
       tickUpper,
       amount0Desired: amount0Wei,
       amount1Desired: amount1Wei,
-      amount0Min: 0, // Set ke 0 untuk slippage maksimum (tidak direkomendasikan di mainnet)
-      amount1Min: 0, // Set ke 0 untuk slippage maksimum
+      amount0Min: 0,
+      // Set ke 0 untuk slippage maksimum (tidak direkomendasikan di mainnet)
+      amount1Min: 0,
+      // Set ke 0 untuk slippage maksimum
       recipient: wallet.address,
       deadline,
     };
 
     let estimatedGas;
     try {
-      estimatedGas = await positionManager.mint.estimateGas(mintParams, { from: wallet.address });
+      estimatedGas = await positionManager.mint.estimateGas(mintParams, {
+        from: wallet.address
+      });
     } catch (error) {
       logger.error(`Gas estimation failed for LP ${index + 1}: ${error.message}`);
       // Coba log detail params jika gas estimation gagal
@@ -694,14 +822,31 @@ const addLiquidity = async (wallet, provider, index, jwt, proxy) => {
 };
 
 const getUserDelay = () => {
+  // 1. Cek Environment Variable terlebih dahulu
   const delayMinutesEnv = process.env.DELAY_MINUTES;
   if (delayMinutesEnv) {
     const minutes = parseInt(delayMinutesEnv, 10);
-    if (!isNaN(minutes) && minutes > 0) return minutes;
+    if (!isNaN(minutes) && minutes >= 25 && minutes <= 30) {
+      return minutes;
+    }
+    console.warn('[WARN] Nilai DELAY_MINUTES tidak valid (harus 25-30). Menggunakan prompt/fallback.');
   }
-  const delayMinutesPrompt = prompt('Enter delay between cycles in minutes (e.g., 30): ');
-  const minutes = parseInt(delayMinutesPrompt, 10);
-  return isNaN(minutes) || minutes <= 0 ? 30 : minutes;
+
+  // 2. Fallback ke prompt interaktif (jika tersedia)
+  try {
+    const delayMinutesPrompt = prompt('Masukkan delay antara siklus dalam menit (25-30): ');
+    const minutes = parseInt(delayMinutesPrompt, 10);
+
+    if (!isNaN(minutes) && minutes >= 25 && minutes <= 30) {
+      return minutes;
+    }
+    console.warn('[WARN] Input tidak valid (harus angka 25-30). Menggunakan default 30.');
+  } catch (error) {
+    console.error('[ERROR] Gagal membaca input:', error.message);
+  }
+
+  // 3. Final fallback ke default 30
+  return 30;
 };
 
 const countdown = async (minutes) => {
@@ -735,7 +880,7 @@ const main = async () => {
 
   while (true) {
     for (const privateKey of privateKeys) {
-      const proxy = proxies.length ? getRandomProxy(proxies) : null;
+      const proxy = proxies.length ? getRandomProxy(proxies): null;
       const provider = setupProvider(proxy);
       const wallet = new ethers.Wallet(privateKey, provider);
 
